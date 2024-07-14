@@ -46,10 +46,7 @@ int pm_map_usage_flags(pm_map_t *map, pm_memusage_t *usage_out,
     for (i = 0; i < len; i++) {
         usage.vss += map->proc->ker->pagesize;
 
-        if (!PM_PAGEMAP_PRESENT(pagemap[i]))
-            continue;
-
-        if (!PM_PAGEMAP_SWAPPED(pagemap[i])) {
+        if (PM_PAGEMAP_PRESENT(pagemap[i]) && !PM_PAGEMAP_SWAPPED(pagemap[i])) {
             if (flags_mask) {
                 uint64_t flags;
                 error = pm_kernel_flags(map->proc->ker, PM_PAGEMAP_PFN(pagemap[i]),
@@ -67,8 +64,20 @@ int pm_map_usage_flags(pm_map_t *map, pm_memusage_t *usage_out,
             usage.rss += (count >= 1) ? map->proc->ker->pagesize : (0);
             usage.pss += (count >= 1) ? (map->proc->ker->pagesize / count) : (0);
             usage.uss += (count == 1) ? (map->proc->ker->pagesize) : (0);
-        } else {
+        } else if (PM_PAGEMAP_SWAPPED(pagemap[i])) {
+            uint64_t swap_offset = PM_PAGEMAP_PFN(pagemap[i]);
+
             usage.swap += map->proc->ker->pagesize;
+#ifdef __ILP32__
+            swap_offset = (swap_offset >> 5) + (swap_offset << 27);
+#else
+            swap_offset = (swap_offset >> 5) + (swap_offset << 59);
+#endif
+            error = pm_kernel_swapn(map->proc->ker, swap_offset,
+                                    &count);
+            if (!error)
+                usage.pswap += (count >= 1) ?
+			(map->proc->ker->pagesize / count) : (0);
         }
     }
 
@@ -114,7 +123,21 @@ int pm_map_workingset(pm_map_t *map, pm_memusage_t *ws_out) {
         if (error) goto out;
 
         ws.vss += map->proc->ker->pagesize;
-        if( PM_PAGEMAP_SWAPPED(pagemap[i]) ) continue;
+        if (PM_PAGEMAP_SWAPPED(pagemap[i])) {
+            ws.swap += map->proc->ker->pagesize;
+            uint64_t swap_offset = PM_PAGEMAP_PFN(pagemap[i]);
+#ifdef __ILP32__
+            swap_offset = (swap_offset >> 5) + (swap_offset << 27);
+#else
+            swap_offset = (swap_offset >> 5) + (swap_offset << 59);
+#endif
+            error = pm_kernel_swapn(map->proc->ker, swap_offset,
+                                    &count);
+            if (!error)
+                ws.pswap += (count >= 1) ?
+			(map->proc->ker->pagesize / count) : (0);
+            continue;
+        }
         ws.rss += (count >= 1) ? (map->proc->ker->pagesize) : (0);
         ws.pss += (count >= 1) ? (map->proc->ker->pagesize / count) : (0);
         ws.uss += (count == 1) ? (map->proc->ker->pagesize) : (0);

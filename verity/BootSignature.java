@@ -203,10 +203,13 @@ public class BootSignature extends ASN1Object
         image.getLong(); // second_addr + tags_addr
         int pageSize = image.getInt();
 
+        int dt_Size = image.getInt();
+
         int length = pageSize // include the page aligned image header
                 + ((kernelSize + pageSize - 1) / pageSize) * pageSize
                 + ((ramdskSize + pageSize - 1) / pageSize) * pageSize
-                + ((secondSize + pageSize - 1) / pageSize) * pageSize;
+                + ((secondSize + pageSize - 1) / pageSize) * pageSize
+                + ((dt_Size + pageSize - 1) / pageSize) * pageSize;
 
         length = ((length + pageSize - 1) / pageSize) * pageSize;
 

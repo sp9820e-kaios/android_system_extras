@@ -127,6 +127,7 @@ int main(int argc, char *argv[]) {
     uint64_t total_pss;
     uint64_t total_uss;
     uint64_t total_swap;
+    uint64_t total_pswap;
     char cmdline[256]; // this must be within the range of int
     int error;
     bool has_swap = false;
@@ -242,11 +243,13 @@ int main(int argc, char *argv[]) {
         printf("%s  %7s  %7s  ", "WRss", "WPss", "WUss");
         if (has_swap) {
             printf("%7s  ", "WSwap");
+            printf("%7s  ", "WPSwap");
         }
     } else {
         printf("%8s  %7s  %7s  %7s  ", "Vss", "Rss", "Pss", "Uss");
         if (has_swap) {
             printf("%7s  ", "Swap");
+            printf("%7s  ", "PSwap");
         }
     }
 
@@ -255,6 +258,7 @@ int main(int argc, char *argv[]) {
     total_pss = 0;
     total_uss = 0;
     total_swap = 0;
+    total_pswap = 0;
 
     for (i = 0; i < num_procs; i++) {
         if (getprocname(procs[i]->pid, cmdline, (int)sizeof(cmdline)) < 0) {
@@ -269,6 +273,7 @@ int main(int argc, char *argv[]) {
         total_pss += procs[i]->usage.pss;
         total_uss += procs[i]->usage.uss;
         total_swap += procs[i]->usage.swap;
+        total_pswap += procs[i]->usage.pswap;
 
         printf("%5d  ", procs[i]->pid);
 
@@ -289,6 +294,7 @@ int main(int argc, char *argv[]) {
 
         if (has_swap) {
             printf("%6zuK  ", procs[i]->usage.swap / 1024);
+            printf("%6zuK  ", procs[i]->usage.pswap / 1024);
         }
 
         printf("%s\n", cmdline);
@@ -324,7 +330,8 @@ int main(int argc, char *argv[]) {
     }
 
     if (has_swap) {
-        printf("%6" PRIu64 "K  ", total_swap);
+        printf("%6" PRIu64 "K  ", total_swap / 1024);
+        printf("%6" PRIu64 "K  ", total_pswap / 1024);
     }
 
     printf("TOTAL\n");

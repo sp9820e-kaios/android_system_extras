@@ -44,7 +44,7 @@ int wipe_block_device(int fd, s64 len)
 
 	range[0] = 0;
 	range[1] = len;
-	ret = ioctl(fd, BLKSECDISCARD, &range);
+	ret = ioctl(fd, BLKDISCARD, &range);
 	if (ret < 0) {
 		range[0] = 0;
 		range[1] = len;

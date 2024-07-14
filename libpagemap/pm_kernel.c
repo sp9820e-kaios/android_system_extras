@@ -51,6 +51,7 @@ int pm_kernel_create(pm_kernel_t **ker_out) {
         return error;
     }
 
+    ker->kpageswapn_fd = open("/proc/kpageswapn", O_RDONLY);
     ker->pagesize = getpagesize();
 
     *ker_out = ker;
@@ -99,7 +100,7 @@ int pm_kernel_pids(pm_kernel_t *ker, pid_t **pids_out, size_t *len) {
     }
 
     closedir(proc);
-    
+
     new_pids = realloc(pids, pids_count * sizeof(pid_t));
     if (!new_pids) {
         error = errno;
@@ -145,12 +146,38 @@ int pm_kernel_flags(pm_kernel_t *ker, uint64_t pfn, uint64_t *flags_out) {
     return 0;
 }
 
+int pm_kernel_swapn(pm_kernel_t *ker, uint64_t pfn, uint64_t *count_out) {
+    off_t off;
+
+    if (!ker || !count_out)
+        return -1;
+
+    if (ker->kpageswapn_fd < 0) {
+        *count_out = 0;
+        return 0;
+    }
+
+    off = lseek(ker->kpageswapn_fd, pfn * sizeof(uint64_t), SEEK_SET);
+    if (off == (off_t)-1) {
+        printf("pm_kernel_swapn lseek failed\n");
+        return errno;
+    }
+    if (read(ker->kpageswapn_fd, count_out, sizeof(uint64_t)) <
+        (ssize_t)sizeof(uint64_t))
+        return errno;
+
+    return 0;
+}
+
+
 int pm_kernel_destroy(pm_kernel_t *ker) {
     if (!ker)
         return -1;
 
     close(ker->kpagecount_fd);
     close(ker->kpageflags_fd);
+    if (ker->kpageswapn_fd >= 0)
+        close(ker->kpageswapn_fd);
 
     free(ker);
 

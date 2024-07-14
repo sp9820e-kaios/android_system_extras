@@ -33,6 +33,7 @@ struct pm_memusage {
     size_t pss;
     size_t uss;
     size_t swap;
+    size_t pswap;
 };
 
 /* Clears a memusage. */
@@ -49,6 +50,7 @@ typedef struct pm_map      pm_map_t;
 struct pm_kernel {
     int kpagecount_fd;
     int kpageflags_fd;
+    int kpageswapn_fd;
 
     int pagesize;
 };
@@ -96,6 +98,10 @@ int pm_kernel_count(pm_kernel_t *ker, uint64_t pfn, uint64_t *count_out);
 /* Get the page flags (from /proc/kpageflags) of a physical frame.
  * The count is returned through *flags_out. */
 int pm_kernel_flags(pm_kernel_t *ker, uint64_t pfn, uint64_t *flags_out);
+
+/* Get the swap count (from /proc/kpageswapn) of a swapped frame.
+ * The count is returned through *count_out. */
+int pm_kernel_swapn(pm_kernel_t *ker, uint64_t pfn, uint64_t *count_out);
 
 #define PM_PAGE_LOCKED     (1 <<  0)
 #define PM_PAGE_ERROR      (1 <<  1)
